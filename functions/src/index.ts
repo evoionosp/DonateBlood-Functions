@@ -6,17 +6,17 @@ import * as admin from 'firebase-admin'
 
 admin.initializeApp()
 
-const REQUEST_DATA_REF = "/REQUEST_DB"
+const REQUEST_DATA_REF = "/REQUEST_DB/"
 const BGArray = ["UNKNOWN","A+","A-","B+","B-","O+","O-","AB+","AB-","RARE TYPE"]
 
 
-  exports.sendNotification = functions.firestore.document(REQUEST_DATA_REF+'/{pushId}').onCreate((snapshot, context) => {
+  exports.sendNotification = functions.firestore.document(REQUEST_DATA_REF+'{pushId}').onCreate((snapshot, context) => {
    
     console.log('Push notification event triggered');
    
    
     const orgName: String = snapshot.get('orgName')
-    const orgPostalCode: String = snapshot.get('orgPostalCode').string
+    const orgPostalCode: String = snapshot.get('orgPostalCode')
     const bloodGroup: String = BGArray[snapshot.get('bloodGroup')]
     const units: String = ""+snapshot.get('units')
     const requestID: String = snapshot.get("requestID")
@@ -26,7 +26,7 @@ const BGArray = ["UNKNOWN","A+","A-","B+","B-","O+","O-","AB+","AB-","RARE TYPE"
     
 
     const payload = {        
-        notification:{            
+        data:{            
                 organization: orgName.toString(),            
                 bloodgroup: bloodGroup.toString(),
                 request_id: context.params.pushId.toString(),            
@@ -39,10 +39,22 @@ const BGArray = ["UNKNOWN","A+","A-","B+","B-","O+","O-","AB+","AB-","RARE TYPE"
                 priority: "high",
                 timeToLive: 60 * 60 * 24
         };
+
+
     
         return admin.messaging().sendToTopic('BG_'+snapshot.get('bloodGroup'), payload, options)
 
   });
 
-  
+  exports.updateRequest = functions.firestore.document(REQUEST_DATA_REF+'{pushId}').onCreate((snapshot, context) => {
+
+          console.log("Path: "+REQUEST_DATA_REF+context.params.pushId.toString()+"/requestID")
+    
+   
+        return admin.firestore().doc(REQUEST_DATA_REF+context.params.pushId.toString()+"/").set({
+          requestID: context.params.pushId.toString()
+        }, {merge: true});
+ 
+
+  }); 
 
